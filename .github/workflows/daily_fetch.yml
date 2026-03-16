@@ -1,0 +1,38 @@
+name: Daily TWSE Data Fetch
+
+on:
+  schedule:
+    # 每天台灣時間 14:30 執行 (14:30 - 8 = UTC 06:30)
+    - cron: '30 6 * * 1-5' 
+  workflow_dispatch: # 允許手動點擊按鈕執行
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 賦予 Action 推送程式碼回 Repo 的權限
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run fetch script
+        run: python fetch_data.py
+
+      - name: Commit and Push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data/*.csv
+          # 只有在有新檔案時才 commit，避免無意義報錯
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update daily data: $(date +'%Y-%m-%d')" && git push)
